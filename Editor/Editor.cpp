@@ -1,5 +1,10 @@
 #include "Editor.h"
+#include "algebra3.h"
+#include "Ray.h"
+#include "VoxelGrid.h"
 #include <iostream>
+#include <fstream>
+#include <stdio.h>
 #include <regex>
 
 Editor::Editor(uint32_t width, uint32_t height)
@@ -92,7 +97,59 @@ void Editor::UpdateTexture(const void * buffer, int width, int height) {
 }
 
 void Editor::Process() {
-	/* TODO : Process volume data & pass raw buffer to UpdateTexture method*/
+	ifstream myData;
+	const int dimX = 512;
+	const int dimY = 512;
+	const int dimZ = 56;
+	VoxelGrid grid = VoxelGrid(1, dimX, dimY, dimZ);
+
+
+	myData.open("C:\\Users\\±èÀç¿ë\\Documents\\tutorials\\volume-rendering-tutorial\\asset\\data\\volume1_512x512x56-short-bigendian.raw", ios::binary);
+
+	if (myData.fail()) {
+		cout << "opening file failed.";
+		exit(1);
+	}
+
+	short value;
+	int i = 0;
+	char pixels[sizeof(short)];
+	
+
+	vector<int> data;
+	vector<int> dataPos;
+
+	while (myData.read(pixels, sizeof(pixels)))
+	{
+		memcpy(&value, pixels, sizeof(value));
+		i++;
+		data.push_back(value);
+	}
+
+	myData.close();
+
+
+	for (int i = 0; i < dimX; i++) {
+		for (int j = 0; j < dimY; j++) {
+			vec3 origin = vec3(0, 0, 0);
+			vec3 direction = vec3(0, 0, 1);
+			Ray ray = Ray(origin, direction);
+
+			float t = 0.5;
+			while (t < 1000) {
+				if()
+			}
+
+
+			float t = INFINITY;
+		//	if () {
+				//valid intersection and the hit point is in front
+		//		vec3 intersectionP = ray.getCurrentPos(t);
+		//	}
+
+
+		}
+	}
 }
 
 void Editor::ControlPanel(uint32_t width, uint32_t height) {
