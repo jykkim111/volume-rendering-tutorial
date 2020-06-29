@@ -131,13 +131,17 @@ void Editor::Process() {
 
 	for (int i = 0; i < dimX; i++) {
 		for (int j = 0; j < dimY; j++) {
-			vec3 origin = vec3(0, 0, 0);
-			vec3 direction = vec3(0, 0, 1);
+			vec3 origin = vec3(i, j, 0);
+			vec3 direction = vec3(i, j, 1);
 			Ray ray = Ray(origin, direction);
 
-			float t = 0.5;
+			//volume entry position 
+			float t = 1;
 			while (t < 1000) {
-				if()
+				if (grid.isInsideGrid(ray.getCurrentPos(t))) {
+
+				}
+				t = t + 0.5;
 			}
 
 
