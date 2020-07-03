@@ -6,6 +6,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <regex>
+#include "Camera.h"
 
 Editor::Editor(uint32_t width, uint32_t height)
 	:m_window(nullptr),
@@ -49,6 +50,13 @@ bool Editor::Initialize() {
 	Process();
 	return true; // Return initialization result
 }
+
+//! Byte swap short
+int16_t swap_int16(int16_t val)
+{
+	return (val << 8) | ((val >> 8) & 0xFF);
+}
+
 
 void Editor::Run() {
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -98,10 +106,9 @@ void Editor::UpdateTexture(const void * buffer, int width, int height) {
 
 void Editor::Process() {
 	ifstream myData;
-	const int dimX = 512;
-	const int dimY = 512;
-	const int dimZ = 56;
-	VoxelGrid grid = VoxelGrid(1, dimX, dimY, dimZ);
+	const int width = 512;
+	const int height = 512;
+	const int depth = 56;
 
 
 	myData.open("C:\\Users\\±èÀç¿ë\\Documents\\tutorials\\volume-rendering-tutorial\\asset\\data\\volume1_512x512x56-short-bigendian.raw", ios::binary);
@@ -111,45 +118,58 @@ void Editor::Process() {
 		exit(1);
 	}
 
-	short value;
+	int16_t value;
 	int i = 0;
-	char pixels[sizeof(short)];
+	char pixels[sizeof(int16_t)];
 	
 
-	vector<int> data;
-	vector<int> dataPos;
+	vector<short> data;
+	vector<vec3> dataPos;
+	vector<vec3> pixelValue;
+	vector<vec3> pixelPos;
 
 	while (myData.read(pixels, sizeof(pixels)))
 	{
 		memcpy(&value, pixels, sizeof(value));
 		i++;
-		data.push_back(value);
+		data.push_back(swap_int16(value));
 	}
 
 	myData.close();
 
 
-	for (int i = 0; i < dimX; i++) {
-		for (int j = 0; j < dimY; j++) {
-			vec3 origin = vec3(i, j, 0);
-			vec3 direction = vec3(i, j, 1);
-			Ray ray = Ray(origin, direction);
+
+	VoxelGrid grid = VoxelGrid(width, height, depth, data);
+	vec3 camPosition = vec3(225, 225, -20);
+	Camera camera = Camera(camPosition);
+
+	//for each pixel
+	for (int i = 0; i < width; i++) {
+		for (int j = 0; j < height; j++) {
+			vec3 origin = camera.getPosition();
+			
+			//Ray ray = Ray(, direction);
 
 			//volume entry position 
-			float t = 1;
-			while (t < 1000) {
-				if (grid.isInsideGrid(ray.getCurrentPos(t))) {
+			float t = 0.5;
+			while (grid.isInsideGrid(ray.getCurrentPos(t))) { //shoot ray
+					vec3 samplePoint = ray.getCurrentPos(t);
 
-				}
-				t = t + 0.5;
+					//interpolation
+					float interpolated = grid.triInterp(samplePoint);
+					/*
+					//transfer function 
+					if (interpolated < 0) {  //black area
+
+					}
+					else { //feature of interest 
+
+
+					}
+					*/
+				t = t + 0.5; //ray step size
 			}
 
-
-			float t = INFINITY;
-		//	if () {
-				//valid intersection and the hit point is in front
-		//		vec3 intersectionP = ray.getCurrentPos(t);
-		//	}
 
 
 		}
@@ -216,3 +236,5 @@ void Editor::HandleSDLEvent(SDL_Event * event) {
 		break;
 	}
 }
+
+
