@@ -140,14 +140,53 @@ void Editor::Process() {
 
 
 	VoxelGrid grid = VoxelGrid(width, height, depth, data);
-	vec3 camPosition = vec3(225, 225, -20);
+	vec3 camPosition = vec3(255, 255, -20);
 	Camera camera = Camera(camPosition);
 
 	//for each pixel
 	for (int i = 0; i < width; i++) {
 		for (int j = 0; j < height; j++) {
-			vec3 origin = camera.getPosition();
+			vec3 pixelCoordinate = vec3(width + 0.5, height + 0.5, -10);
+			Ray ray = Ray(camera.getPosition(), camera.getPosition() - pixelCoordinate);
 			
+			/*
+			vec3 v1 = vec3(0, 0, 0);
+			vec3 v2 = vec3(512, 0, 0);
+			vec3 v3 = vec3(0, 512, 0);
+			vec3 v4 = vec3(512, 512, 0);
+			vec3 v5 = vec3(0, 0, 56);
+			vec3 v6 = vec3(512, 0, 56);
+			vec3 v7 = vec3(0, 512, 56);
+			vec3 v8 = vec3(512, 512, 56);
+			*/
+
+			vec3 min = vec3(0, 0, 0);
+			vec3 max = vec3(512, 512, 56);
+
+
+			//compute ray direction 
+			//Ray primRay;
+			//computePrimRay(i, j, &primray);
+			//Point pHit;
+			//Normal nHit;
+			//float minDis = INFINITY;
+			//Object object = NULL;
+
+			/*
+			for (int k = 0; k < objects.size(); ++k){
+				if(intersect(objects[k], primRay, &pHit, &nHit){
+					float distnace = Distance(eyePosition, pHit);
+					if(distance < minDistance){
+						object = objects[k];
+						minDistance = distance;
+					}
+				}
+
+			}
+			
+			
+			*/
+
 			//Ray ray = Ray(, direction);
 
 			//volume entry position 

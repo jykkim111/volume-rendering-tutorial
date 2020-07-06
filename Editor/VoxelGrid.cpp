@@ -112,6 +112,45 @@ vec3 VoxelGrid::normalize(vec3 samplePoint) {
 	return normalizedPoint;
 }
 
+bool VoxelGrid::intersect(vec3 rayOrigin, vec3 rayDirection, vec3 v1, vec3 v2, vec3 v3) {
+
+	double t;
+	vec3 normal = (v1 - v2) ^ (v2 - v3);
+
+	double denom = rayDirection * normal;
+	if (denom > 1e-6) {
+		vec3 pointOnPlane = v1 - rayOrigin;
+		t = pointOnPlane * normal;
+		return (t >= 0);
+	}
+
+	return false;
+
+	/*
+	if (normal[0] * (currentPos[0] - v1[0]) + normal[1] * (currentPos[1] - v1[1]) + normal[2] * (currentPos[2] - v1[2]) == 0) {
+		return true;
+	}
+	else if (normal[0] * (currentPos[0] - v2[0]) + normal[1] * (currentPos[1] - v2[1]) + normal[2] * (currentPos[2] - v2[2]) == 0) {
+		return true;
+	}
+	else if (normal[0] * (currentPos[0] - v3[0]) + normal[1] * (currentPos[1] - v3[1]) + normal[2] * (currentPos[2] - v3[2]) == 0) {
+		return true;
+	}
+	else {
+		return false;
+	}
+
+	*/
+}
+
+vec3 getIntersectionPoint(vec3 rayOrigin, vec3 rayDirection, vec3 planeNormal, vec3 planePoint) {
+	vec3 diff = rayOrigin - planePoint;
+	double prod1 = diff * planeNormal;
+	double prod2 = rayDirection * planeNormal;
+	double prod3 = prod1 / prod2;
+	return rayOrigin - rayDirection * prod3;
+}
+
 
 
 
