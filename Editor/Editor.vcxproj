@@ -186,7 +186,9 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AABBox.h" />
     <ClInclude Include="algebra3.h" />
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="Editor.h" />
     <ClInclude Include="imgui_impl_sdl_gl3.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
@@ -199,6 +201,8 @@
     <ClInclude Include="VoxelGrid.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AABBox.cpp" />
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="imgui_impl_sdl_gl3.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />

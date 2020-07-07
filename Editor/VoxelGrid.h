@@ -17,18 +17,15 @@ class VoxelGrid
 {
 private:
 	int width, height, depth, size;
-	vector<vec3> dataPos;
 	vector<short> data;
 
 
 public:
 
-	VoxelGrid();
 	VoxelGrid(int width, int height, int depth, vector<short> data);
 
 
-	int getDataIndex(vec3 value, vector<vec3> data);
-	int getDataPosition(vec3 position);
+	int getDataIndex(vec3 position);
 	int getWidth();
 	int getHeight();
 	int getDepth();

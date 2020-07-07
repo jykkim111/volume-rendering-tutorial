@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <regex>
 #include "Camera.h"
+#include "AABBox.h"
 
 Editor::Editor(uint32_t width, uint32_t height)
 	:m_window(nullptr),
@@ -70,8 +71,8 @@ void Editor::Run() {
 		ImGui_ImplSdlGL3_NewFrame(m_window);
 		// Editor
 		{
-			ControlPanel(m_width - 720, 720);
-			Scene(720, 720);
+			ControlPanel(m_width - 512, 512);
+			Scene(512, 512);
 			// Code sample of ImGui (Remove comment when you want to see it)
 			ImGui::ShowTestWindow();
 		}
@@ -135,84 +136,73 @@ void Editor::Process() {
 		data.push_back(swap_int16(value));
 	}
 
+	int max = 0;
+	int min = INFINITY;
+
 	myData.close();
+
+	for (int i = 0; i < data.size(); i++) {
+		if (data[i] > max) {
+			max = data[i];
+		}
+
+		if (data[i] < min) {
+			min = data[i];
+		}
+	}
 
 
 
 	VoxelGrid grid = VoxelGrid(width, height, depth, data);
-	vec3 camPosition = vec3(255, 255, -20);
-	Camera camera = Camera(camPosition);
+	//vec3 camPosition = vec3(255, 255, -20);
+	//Camera camera = Camera(camPosition);
+	vector<double> intensity;
 
 	//for each pixel
-	for (int i = 0; i < width; i++) {
-		for (int j = 0; j < height; j++) {
-			vec3 pixelCoordinate = vec3(width + 0.5, height + 0.5, -10);
-			Ray ray = Ray(camera.getPosition(), camera.getPosition() - pixelCoordinate);
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			vec3 pixelCoordinate = vec3(j + 0.5, i + 0.5, 0);
+			Ray ray = Ray(pixelCoordinate, pixelCoordinate + vec3(0, 0, 1));
+			float t = INFINITY;
+			vec3 volumeVertex1 = vec3(0, 0, 10);
+			vec3 volumeVertex2 = vec3(width -1, height-1, depth+9);
+
+
+			AABBox volumeBound = AABBox(volumeVertex1, volumeVertex2);
+			double color = 0.0;
+			double opacity = 0.0;
+
 			
-			/*
-			vec3 v1 = vec3(0, 0, 0);
-			vec3 v2 = vec3(512, 0, 0);
-			vec3 v3 = vec3(0, 512, 0);
-			vec3 v4 = vec3(512, 512, 0);
-			vec3 v5 = vec3(0, 0, 56);
-			vec3 v6 = vec3(512, 0, 56);
-			vec3 v7 = vec3(0, 512, 56);
-			vec3 v8 = vec3(512, 512, 56);
-			*/
+			if (volumeBound.intersect(ray, t)) {
+				//vec3 hPoint = ray.getOrigin() + t * ray.getDirection(); Already passed t value
 
-			vec3 min = vec3(0, 0, 0);
-			vec3 max = vec3(512, 512, 56);
-
-
-			//compute ray direction 
-			//Ray primRay;
-			//computePrimRay(i, j, &primray);
-			//Point pHit;
-			//Normal nHit;
-			//float minDis = INFINITY;
-			//Object object = NULL;
-
-			/*
-			for (int k = 0; k < objects.size(); ++k){
-				if(intersect(objects[k], primRay, &pHit, &nHit){
-					float distnace = Distance(eyePosition, pHit);
-					if(distance < minDistance){
-						object = objects[k];
-						minDistance = distance;
-					}
-				}
-
-			}
-			
-			
-			*/
-
-			//Ray ray = Ray(, direction);
-
-			//volume entry position 
-			float t = 0.5;
-			while (grid.isInsideGrid(ray.getCurrentPos(t))) { //shoot ray
-					vec3 samplePoint = ray.getCurrentPos(t);
+				while (grid.isInsideGrid(ray.getCurrentPos(t))) {
+					cout << "t: " << t << "\n";
+					vec3 samplePoint = ray.getCurrentPos(t); 
 
 					//interpolation
 					float interpolated = grid.triInterp(samplePoint);
-					/*
-					//transfer function 
-					if (interpolated < 0) {  //black area
+					float pointOpacity = 0.0;
+					
+					cout << interpolated << " ";
 
-					}
-					else { //feature of interest 
-
-
-					}
-					*/
-				t = t + 0.5; //ray step size
+					//transfer function
+					opacity = opacity + (1 - opacity) * pow(pointOpacity + 1024, 2) / 16800000;
+					color = color + (1 - opacity) * (interpolated * 255 / (max - min)) + 63.8;  //Cdes = Cdes + ( 1 - Opacityd) * Csource
+					
+					
+					t = t + 0.5;
+				}
+				//cout << color << " ";
+				intensity.push_back(color);
 			}
 
-
-
+			
 		}
+		
 	}
+	UpdateTexture(intensity.data(), 512, 512);
+	
 }
 
 void Editor::ControlPanel(uint32_t width, uint32_t height) {
@@ -220,6 +210,37 @@ void Editor::ControlPanel(uint32_t width, uint32_t height) {
 	ImGui::SetNextWindowSize(ImVec2((float)width, (float)height));
 	ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::Begin("Control Panel", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+	ImGuiIO& io = ImGui::GetIO();
+
+	if (ImGui::CollapsingHeader("Scene Control")) {
+		if (ImGui::Button("Load Data")) {
+
+
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Transition"))
+	{
+		static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+		ImGui::InputFloat3("input float3", vec4f);
+		ImGui::SliderFloat3("slider float3", vec4f, -100.0f, 100.0f);
+		ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
+	}
+
+	if (ImGui::CollapsingHeader("Volume Data")) {
+		static int vec4i[3] = { 512, 512, 58 };
+		const char* items[] = { "Ray Cast" };
+		static int item = -1;
+		static int window = 123;
+		static int level = 123;
+		ImGui::Combo("Display Mode", &item, items, IM_ARRAYSIZE(items));
+		ImGui::InputInt3("Dimensions", vec4i);
+		ImGui::InputInt("window", &window);
+		ImGui::InputInt("level", &level);
+		ImGui::SameLine();
+	}
+
+
 
 	/* TODO : Write UI Functions */
 
