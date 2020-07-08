@@ -16,23 +16,23 @@ struct Voxel {
 class VoxelGrid
 {
 private:
-	int width, height, depth, size;
+	int width, height, depth;
 	vector<short> data;
 
 
 public:
 
 	VoxelGrid(int width, int height, int depth, vector<short> data);
-
+	
 
 	int getDataIndex(vec3 position);
 	int getWidth();
 	int getHeight();
 	int getDepth();
 	bool isInsideGrid(vec3 coordinate);
-	float triInterp(vec3 samplePoint);
-	float linearInterp(vec3 samplePoint, float value1, float value2);
-	float bilinearInterp(vec3 samplePoint, float value1, float value2);
+	double triInterp(vec3 samplePoint);
+	double linearInterp(vec3 samplePoint, float value1, float value2);
+	double bilinearInterp(vec3 samplePoint, float value1, float value2);
 	vec3 normalize(vec3 samplePoint);
 
 };

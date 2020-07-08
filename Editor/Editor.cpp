@@ -111,7 +111,7 @@ void Editor::Process() {
 	const int height = 512;
 	const int depth = 56;
 
-
+	//open raw data and read to store in vector
 	myData.open("C:\\Users\\김재용\\Documents\\tutorials\\volume-rendering-tutorial\\asset\\data\\volume1_512x512x56-short-bigendian.raw", ios::binary);
 
 	if (myData.fail()) {
@@ -120,19 +120,16 @@ void Editor::Process() {
 	}
 
 	int16_t value;
-	int i = 0;
 	char pixels[sizeof(int16_t)];
 	
 
 	vector<short> data;
-	vector<vec3> dataPos;
-	vector<vec3> pixelValue;
-	vector<vec3> pixelPos;
+	vector<unsigned char> processed;
+	processed.reserve(width * height * 4);
 
 	while (myData.read(pixels, sizeof(pixels)))
 	{
 		memcpy(&value, pixels, sizeof(value));
-		i++;
 		data.push_back(swap_int16(value));
 	}
 
@@ -151,57 +148,62 @@ void Editor::Process() {
 		}
 	}
 
-
+	vec3 volumeVertex1 = vec3(0, 0, 10);
+	vec3 volumeVertex2 = vec3(width - 1, height - 1, depth + 9);
+	AABBox volumeBound = AABBox(volumeVertex1, volumeVertex2);
 
 	VoxelGrid grid = VoxelGrid(width, height, depth, data);
-	//vec3 camPosition = vec3(255, 255, -20);
-	//Camera camera = Camera(camPosition);
-	vector<double> intensity;
-
+	Camera camera = Camera(vec3(255, 255, -10));
 	//for each pixel
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
-			vec3 pixelCoordinate = vec3(j + 0.5, i + 0.5, 0);
-			Ray ray = Ray(pixelCoordinate, pixelCoordinate + vec3(0, 0, 1));
-			float t = INFINITY;
-			vec3 volumeVertex1 = vec3(0, 0, 10);
-			vec3 volumeVertex2 = vec3(width -1, height-1, depth+9);
-
-
-			AABBox volumeBound = AABBox(volumeVertex1, volumeVertex2);
-			double color = 0.0;
-			double opacity = 0.0;
-
 			
+			vec3 pixelCoordinate = vec3(j, i, 0);
+			Ray ray = Ray(pixelCoordinate, vec3(0, 0, 1));
+			float t = INFINITY;
+
 			if (volumeBound.intersect(ray, t)) {
-				//vec3 hPoint = ray.getOrigin() + t * ray.getDirection(); Already passed t value
-
-				while (grid.isInsideGrid(ray.getCurrentPos(t))) {
-					cout << "t: " << t << "\n";
+				unsigned char color = 0;
+				unsigned char A = 0;
+				
+				for (int m = t; t<512; t=t+0.01){					//sampling
+					if (!grid.isInsideGrid(ray.getCurrentPos(t))) {
+						break;					//sample only if ray is still inside grid
+					}
 					vec3 samplePoint = ray.getCurrentPos(t); 
-
+					unsigned char pointA = 0;
+					unsigned char pointColor = 0;
 					//interpolation
-					float interpolated = grid.triInterp(samplePoint);
-					float pointOpacity = 0.0;
+					double interpolated = grid.triInterp(samplePoint);
 					
-					cout << interpolated << " ";
-
+					
 					//transfer function
-					opacity = opacity + (1 - opacity) * pow(pointOpacity + 1024, 2) / 16800000;
-					color = color + (1 - opacity) * (interpolated * 255 / (max - min)) + 63.8;  //Cdes = Cdes + ( 1 - Opacityd) * Csource
+					//Cdes = Cdes + ( 1 - Opacityd) * Csource
+					pointColor = (interpolated * 255 / (max - min)) + 63.8;  // 0 과 255 사이
+					if (interpolated < 100) {
+						pointA = 0;
+					}
+					else {
+						pointA = (interpolated - 100) * 255 / 4000;
+					}
 					
+
+					color = color + (255 - A) * pointColor;
+					A = A + (255 - A) * pointA;
 					
-					t = t + 0.5;
 				}
-				//cout << color << " ";
-				intensity.push_back(color);
+				processed.push_back(color);
+				processed.push_back(color);
+				processed.push_back(color);
+				processed.push_back(A);
 			}
 
 			
 		}
 		
 	}
-	UpdateTexture(intensity.data(), 512, 512);
+
+	UpdateTexture(processed.data(), 512, 512);
 	
 }
 

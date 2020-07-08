@@ -4,8 +4,7 @@
 using namespace std;
 
 
-VoxelGrid::VoxelGrid(int width, int height, int depth, vector<short> data)
-	:
+VoxelGrid::VoxelGrid(int width, int height, int depth, vector<short> data) :
 	width(width),
 	height(height),
 	depth(depth),
@@ -14,7 +13,7 @@ VoxelGrid::VoxelGrid(int width, int height, int depth, vector<short> data)
 	
 }
 
-//retrieve index of voxel 
+//retrieve index of datapoint
 int VoxelGrid::getDataIndex(vec3 position) { 
 	return position[0] + position[1] * height + (position[2] - 10) * width * height;;
 }
@@ -35,83 +34,63 @@ int VoxelGrid::getDepth() {
 
 bool VoxelGrid::isInsideGrid(vec3 coordinate)
 {
-	if (coordinate[0] < width && coordinate[1] < height && coordinate[2] + 10 < depth && coordinate[0] >= 0 && coordinate[1] >= 0 && coordinate[2] >= 0) {
+	if (coordinate[0] <= width - 1 && coordinate[1] <= height-1 && coordinate[2] <= depth + 9 && coordinate[0] >= 0 && coordinate[1] >= 0 && coordinate[2] >= 0) {
 		return true;
 	}
 
 	return false;
 }
 
-float VoxelGrid::triInterp(vec3 samplePoint) {
+double VoxelGrid::triInterp(vec3 samplePoint) {
 
-	vec3 a000, b100, c010, d110, e001, f101, g011, h111;
-	float valueA, valueB, valueC, valueD, valueE, valueF, valueG, valueH;
+	vec3 d000, c100, a010, b110, h001, g101, e011, f111;
+	double valueA, valueB, valueC, valueD, valueE, valueF, valueG, valueH;
 
 	//Get the position of vertices of voxel
-	a000 = vec3(floor(samplePoint[0]),floor(samplePoint[1]), floor(samplePoint[2]));
-	b100 = vec3(ceil(samplePoint[0]), floor(samplePoint[1]), floor(samplePoint[2]));
-	c010 = vec3(floor(samplePoint[0]), ceil(samplePoint[1]), floor(samplePoint[2]));
-	d110 = vec3(ceil(samplePoint[0]), ceil(samplePoint[1]), floor(samplePoint[2]));
+	d000 = vec3(floor(samplePoint[0]),floor(samplePoint[1]), floor(samplePoint[2]));
+	c100 = vec3(ceil(samplePoint[0]), floor(samplePoint[1]), floor(samplePoint[2]));
+	a010 = vec3(floor(samplePoint[0]), ceil(samplePoint[1]), floor(samplePoint[2]));
+	b110 = vec3(ceil(samplePoint[0]), ceil(samplePoint[1]), floor(samplePoint[2]));
 
-	e001 = vec3(floor(samplePoint[0]), floor(samplePoint[1]), ceil(samplePoint[2]));
-	f101 = vec3(ceil(samplePoint[0]), floor(samplePoint[1]), ceil(samplePoint[2]));
-	g011 = vec3(floor(samplePoint[0]), ceil(samplePoint[1]), ceil(samplePoint[2]));
-	h111 = vec3(ceil(samplePoint[0]), ceil(samplePoint[1]), ceil(samplePoint[2]));
+	h001 = vec3(floor(samplePoint[0]), floor(samplePoint[1]), ceil(samplePoint[2]));
+	g101 = vec3(ceil(samplePoint[0]), floor(samplePoint[1]), ceil(samplePoint[2]));
+	e011 = vec3(floor(samplePoint[0]), ceil(samplePoint[1]), ceil(samplePoint[2]));
+	f111 = vec3(ceil(samplePoint[0]), ceil(samplePoint[1]), ceil(samplePoint[2]));
 
 
 	//Get the corresponding data value of the vertices
-	valueA = data[getDataIndex(a000)];
-	valueB = data[getDataIndex(b100)];
-	valueC = data[getDataIndex(c010)];
-	valueD = data[getDataIndex(d110)];
-	valueE = data[getDataIndex(e001)];
-	valueF = data[getDataIndex(f101)];
-	valueG = data[getDataIndex(g011)];
-	valueH = data[getDataIndex(h111)];
+	valueD = data[getDataIndex(d000)];
+	valueC = data[getDataIndex(c100)];
+	valueA = data[getDataIndex(a010)];
+	valueB = data[getDataIndex(b110)];
+	valueH = data[getDataIndex(h001)];
+	valueG = data[getDataIndex(g101)];
+	valueE = data[getDataIndex(e011)];
+	valueF = data[getDataIndex(f111)];
 
-	float valueAB = linearInterp(samplePoint, valueA, valueB);
-	float valueCD = linearInterp(samplePoint, valueC, valueD);
-	float valueABCD = bilinearInterp(samplePoint, valueAB, valueCD);
-	float valueEF = linearInterp(samplePoint, valueE, valueF);
-	float valueGH = linearInterp(samplePoint, valueG, valueH);
-	float valueEFGH = bilinearInterp(samplePoint, valueEF, valueGH);
+	//cout << valueD << "\n" << valueC << "\n" << valueA << "\n" << valueB << "\n" << valueH << "\n" << valueG << "\n" << valueE << "\n" << valueF << "\n" << "end\n";
+
+	double valueAB = linearInterp(samplePoint, valueA, valueB);
+	double valueCD = linearInterp(samplePoint, valueC, valueD);
+	double valueABCD = bilinearInterp(samplePoint, valueAB, valueCD);
+	double valueEF = linearInterp(samplePoint, valueE, valueF);
+	double valueGH = linearInterp(samplePoint, valueG, valueH);
+	double valueEFGH = bilinearInterp(samplePoint, valueEF, valueGH);
 
 
-	if (ceil(samplePoint[2]) - samplePoint[2] == 0) {
-		return valueEFGH;
-	}
-	else if (samplePoint[2] - floor(samplePoint[2]) == 0) {
-		return valueABCD;
-	}
-	else {
-		return (ceil(samplePoint[2]) - samplePoint[2]) * valueABCD + (samplePoint[2] - floor(samplePoint[2])) * valueEFGH;
-	}
-
+	double z = samplePoint[2] - floor(samplePoint[2]);
+	return (1 - z) * valueABCD + z * valueEFGH;
 }
 
 
-float VoxelGrid::linearInterp(vec3 samplePoint, float value1, float value2) {
-	if (ceil(samplePoint[0]) - samplePoint[0] == 0) {
-		return value2;
-	}
-	else if (samplePoint[0] - floor(samplePoint[0]) == 0) {
-		return value1;
-	}
-	else {
-		return (ceil(samplePoint[0]) - samplePoint[0]) * value1 + (samplePoint[0] - floor(samplePoint[0])) * value2;
-	}
+double VoxelGrid::linearInterp(vec3 samplePoint, float valueA, float valueB) {
+	double x = samplePoint[0] - floor(samplePoint[0]);
+	return (1 - x) * valueA + x * valueB;
 }
 
-float VoxelGrid::bilinearInterp(vec3 samplePoint, float value1, float value2) {
-	if (ceil(samplePoint[1]) - samplePoint[1] == 0) {
-		return samplePoint[1] * value2;
-	}
-	else if (samplePoint[1] - floor(samplePoint[1]) == 0) {
-		return (samplePoint[1] + 1) * value1;
-	}
-	else {
-		return (ceil(samplePoint[1]) - samplePoint[1]) * value1 + (samplePoint[1] - floor(samplePoint[1])) * value2;
-	}
+double VoxelGrid::bilinearInterp(vec3 samplePoint, float valueA, float valueB) {
+	double y = samplePoint[1] - floor(samplePoint[1]);
+	return y * valueA + (1 - y) * valueB;
 }
 
 vec3 VoxelGrid::normalize(vec3 samplePoint) {
