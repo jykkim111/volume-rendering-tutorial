@@ -15,7 +15,7 @@ VoxelGrid::VoxelGrid(int width, int height, int depth, vector<short> data) :
 
 //retrieve index of datapoint
 int VoxelGrid::getDataIndex(vec3 position) { 
-	return position[0] + position[1] * height + (position[2] - 10) * width * height;;
+	return position[0] + position[1] * height + position[2] * width * height;;
 }
 
 
@@ -34,7 +34,7 @@ int VoxelGrid::getDepth() {
 
 bool VoxelGrid::isInsideGrid(vec3 coordinate)
 {
-	if (coordinate[0] <= width - 1 && coordinate[1] <= height-1 && coordinate[2] <= depth + 9 && coordinate[0] >= 0 && coordinate[1] >= 0 && coordinate[2] >= 0) {
+	if (coordinate[0] <= width - 1 && coordinate[1] <= height-1 && coordinate[2] <= depth-1 && coordinate[0] >= 0 && coordinate[1] >= 0 && coordinate[2] >= 0) {
 		return true;
 	}
 

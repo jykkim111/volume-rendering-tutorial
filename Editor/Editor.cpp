@@ -163,42 +163,46 @@ void Editor::Process() {
 			float t = INFINITY;
 
 			if (volumeBound.intersect(ray, t)) {
-				unsigned char color = 0;
-				unsigned char A = 0;
+				float color = 0;
+				float A = 1;
 				
-				for (int m = t; t<512; t=t+0.01){					//sampling
-					if (!grid.isInsideGrid(ray.getCurrentPos(t))) {
+				for (int m = t * 20; t< depth * 20; m++){
+					float increment = m / 20.0;					//sampling
+					if (!grid.isInsideGrid(ray.getCurrentPos(increment))) {
 						break;					//sample only if ray is still inside grid
 					}
-					vec3 samplePoint = ray.getCurrentPos(t); 
-					unsigned char pointA = 0;
-					unsigned char pointColor = 0;
+					vec3 samplePoint = ray.getCurrentPos(increment); 
+					float pointA = 0;
+					float pointColor = 0;
 					//interpolation
 					double interpolated = grid.triInterp(samplePoint);
 					
 					
 					//transfer function
 					//Cdes = Cdes + ( 1 - Opacityd) * Csource
-					pointColor = (interpolated * 255 / (max - min)) + 63.8;  // 0 과 255 사이
-					if (interpolated < 100) {
+					if (interpolated < 0) {
+						pointColor = 0;
+					}
+					else {
+						pointColor = interpolated / max;  // 0 과 255 사이 
+					}
+					
+					if (interpolated < 200) {
 						pointA = 0;
 					}
 					else {
-						pointA = (interpolated - 100) * 255 / 4000;
+						pointA = (interpolated -200)/ (max - 200);
 					}
-					
 
-					color = color + (255 - A) * pointColor;
-					A = A + (255 - A) * pointA;
-					
+					color = color + pointA * pointColor * A;
+					A = A * (1 - pointA);
+
 				}
-				processed.push_back(color);
-				processed.push_back(color);
-				processed.push_back(color);
-				processed.push_back(A);
+				processed.push_back((unsigned char)(color * 255));
+				processed.push_back((unsigned char)(color * 255));
+				processed.push_back((unsigned char)(color * 255));
+				processed.push_back((unsigned char)255);
 			}
-
-			
 		}
 		
 	}
