@@ -197,6 +197,8 @@
     <ClInclude Include="include\imgui\stb_rect_pack.h" />
     <ClInclude Include="include\imgui\stb_textedit.h" />
     <ClInclude Include="include\imgui\stb_truetype.h" />
+    <ClInclude Include="ArcBall.h" />
+    <ClInclude Include="quat4.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="VoxelGrid.h" />
   </ItemGroup>
@@ -209,6 +211,7 @@
     <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ArcBall.cpp" />
     <ClCompile Include="Ray.cpp" />
     <ClCompile Include="VoxelGrid.cpp" />
   </ItemGroup>

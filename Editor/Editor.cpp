@@ -80,7 +80,6 @@ void Editor::Run() {
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT);
-
 		ImGui::Render();
 		SDL_GL_SwapWindow(m_window);
 	}
@@ -148,17 +147,22 @@ void Editor::Process() {
 		}
 	}
 
-	vec3 volumeVertex1 = vec3(0, 0, 10);
-	vec3 volumeVertex2 = vec3(width - 1, height - 1, depth + 9);
+	vec3 volumeVertex1 = vec3(0, 0, 0);
+	vec3 volumeVertex2 = vec3(width - 1, height - 1, depth -1);
 	AABBox volumeBound = AABBox(volumeVertex1, volumeVertex2);
 
 	VoxelGrid grid = VoxelGrid(width, height, depth, data);
-	Camera camera = Camera(vec3(255, 255, -10));
+
+
+	vec3 center = vec3(width / 2, height / 2, depth / 2);
+
+	//Camera camera = Camera(vec3(255, 255, -10));
 	//for each pixel
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
 			
 			vec3 pixelCoordinate = vec3(j, i, 0);
+
 			Ray ray = Ray(pixelCoordinate, vec3(0, 0, 1));
 			float t = INFINITY;
 
@@ -211,6 +215,119 @@ void Editor::Process() {
 	
 }
 
+void Editor::Process(ImVec2 mouseDragged) {
+	ifstream myData;
+	const int width = 512;
+	const int height = 512;
+	const int depth = 56;
+	ImVec2 value_with_lock_threshold = mouseDragged;
+	cout << value_with_lock_threshold.x<< " " << value_with_lock_threshold.y << "\n";
+
+	//open raw data and read to store in vector
+	myData.open("C:\\Users\\김재용\\Documents\\tutorials\\volume-rendering-tutorial\\asset\\data\\volume1_512x512x56-short-bigendian.raw", ios::binary);
+
+	if (myData.fail()) {
+		cout << "opening file failed.";
+		exit(1);
+	}
+
+	int16_t value;
+	char pixels[sizeof(int16_t)];
+
+
+	vector<short> data;
+	vector<unsigned char> processed;
+	processed.reserve(width * height * 4);
+
+	while (myData.read(pixels, sizeof(pixels)))
+	{
+		memcpy(&value, pixels, sizeof(value));
+		data.push_back(swap_int16(value));
+	}
+
+	int max = 0;
+	int min = INFINITY;
+
+	myData.close();
+
+	for (int i = 0; i < data.size(); i++) {
+		if (data[i] > max) {
+			max = data[i];
+		}
+
+		if (data[i] < min) {
+			min = data[i];
+		}
+	}
+
+	vec3 volumeVertex1 = vec3(0, 0, 0);
+	vec3 volumeVertex2 = vec3(width - 1, height - 1, depth - 1);
+	AABBox volumeBound = AABBox(volumeVertex1, volumeVertex2);
+
+	VoxelGrid grid = VoxelGrid(width, height, depth, data);
+
+
+	vec3 center = vec3(width / 2, height / 2, depth / 2);
+
+	//Camera camera = Camera(vec3(255, 255, -10));
+	//for each pixel
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+
+			vec3 pixelCoordinate = vec3(j, i, 0);
+
+			Ray ray = Ray(pixelCoordinate, vec3(0, 0, 1));
+			float t = INFINITY;
+
+			if (volumeBound.intersect(ray, t)) {
+				float color = 0;
+				float A = 1;
+				double step_size = 1;
+				for (int m = t * step_size; m < depth * step_size; m++) {
+					float increment = m / step_size;					//sampling
+					if (!grid.isInsideGrid(ray.getCurrentPos(increment))) {
+						break;					//sample only if ray is still inside grid
+					}
+					vec3 samplePoint = ray.getCurrentPos(increment);
+					float pointA = 0;
+					float pointColor = 0;
+					//interpolation
+					double interpolated = grid.triInterp(samplePoint);
+
+
+					//transfer function
+					//Cdes = Cdes + ( 1 - Opacityd) * Csource
+					if (interpolated < 0) {
+						pointColor = 0;
+					}
+					else {
+						pointColor = interpolated / max;  // 0 과 255 사이 
+					}
+
+					if (interpolated < 200) {
+						pointA = 0;
+					}
+					else {
+						pointA = (interpolated - 200) / (max - 200);
+					}
+
+					color = color + pointA * pointColor * A;
+					A = A * (1 - pointA);
+
+				}
+				processed.push_back((unsigned char)(color * 255));
+				processed.push_back((unsigned char)(color * 255));
+				processed.push_back((unsigned char)(color * 255));
+				processed.push_back((unsigned char)255);
+			}
+		}
+
+	}
+
+	UpdateTexture(processed.data(), 512, 512);
+
+}
+
 void Editor::ControlPanel(uint32_t width, uint32_t height) {
 	// Control Panel Window
 	ImGui::SetNextWindowSize(ImVec2((float)width, (float)height));
@@ -227,9 +344,9 @@ void Editor::ControlPanel(uint32_t width, uint32_t height) {
 
 	if (ImGui::CollapsingHeader("Transition"))
 	{
-		static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-		ImGui::InputFloat3("input float3", vec4f);
-		ImGui::SliderFloat3("slider float3", vec4f, -100.0f, 100.0f);
+		static float angles[4] = { 0, 0, 0, 0.5f };
+		ImGui::InputFloat3("input float3", angles);
+		ImGui::SliderFloat3("slider float3", angles, 0.0f, 360.0f);
 		ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
 	}
 
@@ -245,6 +362,11 @@ void Editor::ControlPanel(uint32_t width, uint32_t height) {
 		ImGui::InputInt("level", &level);
 		ImGui::SameLine();
 	}
+
+	//if (ImGui::IsMouseDragging()) {
+	//	cout << "mouse moved this much : ";
+	//	
+	//}
 
 
 
@@ -262,6 +384,16 @@ void Editor::Scene(uint32_t width, uint32_t height) {
 	if (m_hasTexture) {
 		ImGui::Image(ImTextureID(m_textureID), ImGui::GetContentRegionAvail());
 	}
+	//maybe implement arcball later when using gpu
+	/*
+	if (ImGui::IsWindowHovered()) {
+		if (ImGui::IsMouseDragging()) {
+			Process(ImGui::GetMouseDragDelta(0));
+		}
+	}
+	*/
+	
+
 	ImGui::End();
 }
 

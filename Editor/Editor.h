@@ -4,6 +4,7 @@
 #include <GL\glew.h>  
 #include <SDL\SDL.h>
 #include <chrono>
+#include "algebra3.h"
 #undef main // undef to remove sdl_main
 
 #pragma once
@@ -18,6 +19,7 @@ private:
 	// Volume renderer functionality
 	void UpdateTexture(const void* buffer, const int width, const int height);
 	void Process();
+	void Process(ImVec2 mouseDragged);
 	// UI
 	void ControlPanel(uint32_t width, uint32_t height);
 	void Scene(uint32_t width, uint32_t height);
