@@ -18,8 +18,7 @@ public:
 private:
 	// Volume renderer functionality
 	void UpdateTexture(const void* buffer, const int width, const int height);
-	void Process();
-	void Process(ImVec2 mouseDragged);
+	void Process(float angles[]);
 	// UI
 	void ControlPanel(uint32_t width, uint32_t height);
 	void Scene(uint32_t width, uint32_t height);

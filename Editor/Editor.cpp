@@ -45,10 +45,10 @@ bool Editor::Initialize() {
 	m_window = SDL_CreateWindow("Volume Renderer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_width, m_height, SDL_WINDOW_OPENGL);
 	SDL_GLContext glcontext = SDL_GL_CreateContext(m_window);
 	glewInit();
-
+	float angles[4] = { 0, 0, 0, 0.0f };
 	// Setup ImGui binding
 	ImGui_ImplSdlGL3_Init(m_window);
-	Process();
+	Process(angles);
 	return true; // Return initialization result
 }
 
@@ -104,124 +104,11 @@ void Editor::UpdateTexture(const void * buffer, int width, int height) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Editor::Process() {
+void Editor::Process(float angles[4]) {
 	ifstream myData;
 	const int width = 512;
 	const int height = 512;
 	const int depth = 56;
-
-	//open raw data and read to store in vector
-	myData.open("C:\\Users\\±èÀç¿ë\\Documents\\tutorials\\volume-rendering-tutorial\\asset\\data\\volume1_512x512x56-short-bigendian.raw", ios::binary);
-
-	if (myData.fail()) {
-		cout << "opening file failed.";
-		exit(1);
-	}
-
-	int16_t value;
-	char pixels[sizeof(int16_t)];
-	
-
-	vector<short> data;
-	vector<unsigned char> processed;
-	processed.reserve(width * height * 4);
-
-	while (myData.read(pixels, sizeof(pixels)))
-	{
-		memcpy(&value, pixels, sizeof(value));
-		data.push_back(swap_int16(value));
-	}
-
-	int max = 0;
-	int min = INFINITY;
-
-	myData.close();
-
-	for (int i = 0; i < data.size(); i++) {
-		if (data[i] > max) {
-			max = data[i];
-		}
-
-		if (data[i] < min) {
-			min = data[i];
-		}
-	}
-
-	vec3 volumeVertex1 = vec3(0, 0, 0);
-	vec3 volumeVertex2 = vec3(width - 1, height - 1, depth -1);
-	AABBox volumeBound = AABBox(volumeVertex1, volumeVertex2);
-
-	VoxelGrid grid = VoxelGrid(width, height, depth, data);
-
-
-	vec3 center = vec3(width / 2, height / 2, depth / 2);
-
-	//Camera camera = Camera(vec3(255, 255, -10));
-	//for each pixel
-	for (int i = 0; i < height; i++) {
-		for (int j = 0; j < width; j++) {
-			
-			vec3 pixelCoordinate = vec3(j, i, 0);
-
-			Ray ray = Ray(pixelCoordinate, vec3(0, 0, 1));
-			float t = INFINITY;
-
-			if (volumeBound.intersect(ray, t)) {
-				float color = 0;
-				float A = 1;
-				
-				for (int m = t * 20; t< depth * 20; m++){
-					float increment = m / 20.0;					//sampling
-					if (!grid.isInsideGrid(ray.getCurrentPos(increment))) {
-						break;					//sample only if ray is still inside grid
-					}
-					vec3 samplePoint = ray.getCurrentPos(increment); 
-					float pointA = 0;
-					float pointColor = 0;
-					//interpolation
-					double interpolated = grid.triInterp(samplePoint);
-					
-					
-					//transfer function
-					//Cdes = Cdes + ( 1 - Opacityd) * Csource
-					if (interpolated < 0) {
-						pointColor = 0;
-					}
-					else {
-						pointColor = interpolated / max;  // 0 °ú 255 »çÀÌ 
-					}
-					
-					if (interpolated < 200) {
-						pointA = 0;
-					}
-					else {
-						pointA = (interpolated -200)/ (max - 200);
-					}
-
-					color = color + pointA * pointColor * A;
-					A = A * (1 - pointA);
-
-				}
-				processed.push_back((unsigned char)(color * 255));
-				processed.push_back((unsigned char)(color * 255));
-				processed.push_back((unsigned char)(color * 255));
-				processed.push_back((unsigned char)255);
-			}
-		}
-		
-	}
-
-	UpdateTexture(processed.data(), 512, 512);
-	
-}
-
-void Editor::Process(ImVec2 mouseDragged) {
-	ifstream myData;
-	const int width = 512;
-	const int height = 512;
-	const int depth = 56;
-	ImVec2 value_with_lock_threshold = mouseDragged;
-	cout << value_with_lock_threshold.x<< " " << value_with_lock_threshold.y << "\n";
 
 	//open raw data and read to store in vector
 	myData.open("C:\\Users\\±èÀç¿ë\\Documents\\tutorials\\volume-rendering-tutorial\\asset\\data\\volume1_512x512x56-short-bigendian.raw", ios::binary);
@@ -260,30 +147,73 @@ void Editor::Process(ImVec2 mouseDragged) {
 		}
 	}
 
+	mat4 rotationX = rotation3D(vec3(1, 0, 0), angles[0]);
+	mat4 rotationY = rotation3D(vec3(0, 1, 0), angles[1]);
+	mat4 rotationZ = rotation3D(vec3(0, 0, 1), angles[2]);
+
+	vec3 volumeCenter = vec3((width - 1) / 2, (height - 1) / 2, depth / 2);
 	vec3 volumeVertex1 = vec3(0, 0, 0);
 	vec3 volumeVertex2 = vec3(width - 1, height - 1, depth - 1);
 	AABBox volumeBound = AABBox(volumeVertex1, volumeVertex2);
 
+	vec3 rayDirection = vec3(0, 0, 1);
+
+	//cout << volumeVertex1 << "\n";
+	vec3 planeStart = vec3(0, 0, -300);
+	vec3 widthVector = vec3(1, 0, 0);
+	vec3 heightVector = vec3(0, 1, 0);
+	//vec3 translatedCenter = volumeCenter * translation3D(volumeCenter);
+	vec3 translatedPlane = translation3D(-1* volumeCenter) * planeStart;
+	
+
+	//vec3 reCenter = translation3D(volumeCenter) * translatedCenter;
+	
+
+	vec3 finalDirection = rotationX * rotationY * rotationZ * rayDirection;
+	vec3 finalWidthVector = rotationX * rotationY * rotationZ * widthVector;
+	vec3 finalHeightVector = rotationX * rotationY * rotationZ * heightVector;
+
+	vec3 widthVectorLength = finalWidthVector.normalize();
+	vec3 heightVectorLength = finalHeightVector.normalize();
+	vec3 finalDirectionVector = finalDirection.normalize();
+
+	
+	cout << widthVectorLength << " " << heightVectorLength << "\n";
+	cout << finalDirectionVector << "\n";
+
+	vec3 finalPlane = translation3D(volumeCenter) * rotationX * rotationY * rotationZ * translatedPlane;
+	cout << finalPlane << "\n";
 	VoxelGrid grid = VoxelGrid(width, height, depth, data);
 
 
-	vec3 center = vec3(width / 2, height / 2, depth / 2);
 
+
+	
 	//Camera camera = Camera(vec3(255, 255, -10));
 	//for each pixel
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
 
-			vec3 pixelCoordinate = vec3(j, i, 0);
+			vec3 pixelCoordinate = finalPlane + (j * widthVectorLength)+ (i * heightVectorLength);
+			if (i == height / 2 && j == width / 2) {
+				cout << pixelCoordinate;
+			}
+			else if (j == width - 1 && i == height - 1) {
+				cout << pixelCoordinate;
+			}
+			else {
 
-			Ray ray = Ray(pixelCoordinate, vec3(0, 0, 1));
+			}
+	
+
+			Ray ray = Ray(pixelCoordinate, finalDirectionVector);
 			float t = INFINITY;
-
+			float color = 0;
+			float A = 1;
 			if (volumeBound.intersect(ray, t)) {
-				float color = 0;
-				float A = 1;
+
 				double step_size = 1;
-				for (int m = t * step_size; m < depth * step_size; m++) {
+				for (int m = t * step_size; m < depth * 10000 * step_size; m++) {
 					float increment = m / step_size;					//sampling
 					if (!grid.isInsideGrid(ray.getCurrentPos(increment))) {
 						break;					//sample only if ray is still inside grid
@@ -315,11 +245,12 @@ void Editor::Process(ImVec2 mouseDragged) {
 					A = A * (1 - pointA);
 
 				}
-				processed.push_back((unsigned char)(color * 255));
-				processed.push_back((unsigned char)(color * 255));
-				processed.push_back((unsigned char)(color * 255));
-				processed.push_back((unsigned char)255);
+				
 			}
+			processed.push_back((unsigned char)(color * 255));
+			processed.push_back((unsigned char)(color * 255));
+			processed.push_back((unsigned char)(color * 255));
+			processed.push_back((unsigned char)255);
 		}
 
 	}
@@ -347,6 +278,9 @@ void Editor::ControlPanel(uint32_t width, uint32_t height) {
 		static float angles[4] = { 0, 0, 0, 0.5f };
 		ImGui::InputFloat3("input float3", angles);
 		ImGui::SliderFloat3("slider float3", angles, 0.0f, 360.0f);
+		if (ImGui::IsItemActive()) {
+			Process(angles);
+		}
 		ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
 	}
 
@@ -392,6 +326,7 @@ void Editor::Scene(uint32_t width, uint32_t height) {
 		}
 	}
 	*/
+	
 	
 
 	ImGui::End();
